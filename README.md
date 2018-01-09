@@ -13,12 +13,12 @@ I propose to add a new method to the `Math` object, provisionally named `seededR
 
 That is, the usage will be something like:
 
-`
+```
 for(const [i,r] of enumerate(Math.seededRandoms(0))) {
   // do something with each value
   if(i >= limit) break;
 }
-`
+```
 
 Why not a `Math.random()` argument?
 -----------------------------------
