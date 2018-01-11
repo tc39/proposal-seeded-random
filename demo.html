@@ -5,6 +5,7 @@ function log(message) {document.querySelector("#log").textContent += message + "
 function* enumerate(iter, start=0) {let i = start;for(const el of iter) {yield [i, el];i++;}};
 
 Math.seededRandoms = function*(seed) {
+ // Really dumb LCG, using the glibc constants
  if(!Number.isFinite(seed)) throw Error("Math.seededRandoms() takes a numeric seed.");
  const a = 1103515245;
  const c = 12345;
