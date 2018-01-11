@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<pre id=log></pre>
+<script>
+function log(message) {document.querySelector("#log").textContent += message + "\n";};
+function* enumerate(iter, start=0) {let i = start;for(const el of iter) {yield [i, el];i++;}};
+
+Math.seededRandoms = function*(seed) {
+ if(!Number.isFinite(seed)) throw Error("Math.seededRandoms() takes a numeric seed.");
+ const a = 1103515245;
+ const c = 12345;
+ const mod = Math.pow(2, 31) - 1;
+ seed = (+seed) % mod;
+ while(true) {
+  seed = (seed * a + c) % mod;
+  yield (seed & 0x3fffffff)/0x3fffffff;
+ }
+};
+
+
+var counts = [0,0,0,0,0,0,0,0,0,0];
+var limit = 1e5;
+for(const [i,r] of enumerate(Math.seededRandoms(0))) {
+  counts[Math.floor(r*10)]++;
+  if(i >= limit) break;
+}
+for(const [i,c] of enumerate(counts)) {
+ log(`${i}: ${(c/limit*100).toFixed(1)}%`);
+}
+</script>
