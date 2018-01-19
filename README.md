@@ -20,6 +20,13 @@ for(const [i,r] of enumerate(Math.seededRandoms(0))) {
 }
 ```
 
+The specification will also define a *specific* random-number generator for this purpose.  (I do not have one in mind; happy to let more informed people make this decision.)  This ensures two things:
+
+1. The range of possible seeds is knowable and stable, so if you're generating a random seed you can take full advantage of the possible entropy.
+2. The numbers produced are identical across (a) user agents, and (b) versions of the same user agent.  This is important for, say, using a seeded sequence to simulate a trial, and getting the same results across different computers.
+
+The algorithm used is not, in this proposal, intended to be configurable.
+
 Why not a `Math.random()` argument?
 -----------------------------------
 
