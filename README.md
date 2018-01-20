@@ -9,7 +9,9 @@ Currently, the only way to get around this would be for the callback to implemen
 `Math.seededRandoms(seed)`
 ----------------------------
 
-I propose to add a new method to the `Math` object, provisionally named `seededRandoms()`. It takes a single required argument, the `seed`, which is a JS number (or integer? I dunno what's best).  It is a generator function, and the iterator it returns will yield an infinite sequence of random values seeded by the provided `seed`.
+I propose to add a new method to the `Math` object, provisionally named `seededRandoms()`. It takes a single required argument, the `seed`, which is either a JS integer or BigInt.  
+
+It is a generator function, and the iterator it returns will yield an infinite sequence of random values seeded by the provided `seed`.
 
 That is, the usage will be something like:
 
@@ -27,8 +29,18 @@ The specification will also define a *specific* random-number generator for this
 
 The algorithm used is not, in this proposal, intended to be configurable.
 
-Why not a `Math.random()` argument?
------------------------------------
+Issue: Resuming a seeded sequence later
+---------------------------------------
+
+`Math.random()` returns a value between 0 and 1.  `Math.seededRandoms()` wants a seed value that is an integer (standard for random algos).  If `Math.seededRandoms()`'s output value is also between 0 and 1, then it's not appropriate to use for a seed value directly.  This is problematic if you want to save the current state of the generator so you can resume from the same point later, and object references will expire (such as storing itinto localStorage, or sending over the network).
+
+Possible solutions:
+
+1. `Math.seededRandoms()` returns an integer in whatever range the random-number algo produces.  It can then be fed directly back in as a seed value.  Con is that the behavior now differs from `Math.random()`.
+2. `Math.seededRandoms()` returns a value between 0 and 1.  The spec defines how to turn this number back into a seed value (presumably just `Math.floor(val * maxRandomValue)`?), and authors do that themselves when required.  (This presumes that the generator *actually* generates an integer, and returns a `[0,1]` value simply by dividing the integer by the maximum possible integer. Is this a valid assumption?)
+
+Issue: Why not a `Math.random()` argument?
+------------------------------------------
 
 Another possible approach is to add an options object to `Math.random()`, and define a `seed` key that can be provided.  When you do so, it uses that seed to generate the value, rather than its internal seed value.  This approach should be familiar from C/Java/etc.
 
