@@ -4,6 +4,8 @@
 
 **Champion: Tab Atkins-Bittner**
 
+------
+
 JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "automatically seeded" - each invocation produces a fresh unpredictable random number, not reproducible across runs or realms.  However, there are several use-cases that want a reproducible set of random values, and so want to be able to seed the random generator themselves.
 
 1. New APIs like the CSS Custom Paint, which can't store state but can be invoked arbitrarily often, want to be able to produce the same set of pseudo-random numbers each time they're invoked. 
@@ -34,7 +36,7 @@ for(const [i,r] of enumerate(Math.seededPRNG({seed:0}))) {
 
 The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the generator.  *\[Should we guarantee what type it's returned as?]*
 
-The specification will also define a *specific* random-number generator for this purpose.  (I do not have one in mind; happy to let more informed people make this decision.)  This ensures two things:
+The specification will also define a *specific* random-number generator for this purpose.  *\[Which one?]*  This ensures two things:
 
 1. The range of possible seeds is knowable and stable, so if you're generating a random seed you can take full advantage of the possible entropy.
 2. The numbers produced are identical across (a) user agents, and (b) versions of the same user agent.  This is important for, say, using a seeded sequence to simulate a trial, and getting the same results across different computers.
