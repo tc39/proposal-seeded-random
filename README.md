@@ -21,20 +21,21 @@ Currently, the only way to achieve these goals is to implement your own PRNG by 
 `Math.seededPRNG({seed})`
 -------------------------
 
-I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS integer or BigInt. *\[And/or a TypedArray?]*
+I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt. *\[And/or a TypedArray?]*
 
-`seededPRNG()` is a generator function, and the iterator it returns will yield an infinite sequence of random values seeded by the provided `seed`.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
+`seededPRNG()` returns a function object which, on each invocation, will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
 
 That is, the usage will be something like:
 
 ```
-for(const [i,r] of enumerate(Math.seededPRNG({seed:0}))) {
+const prng = Math.seededPRNG({seed:0});
+for(let i = 0; i < limit; i++) {
+  const r = prng();
   // do something with each value
-  if(i >= limit) break;
 }
 ```
 
-The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the generator.  *\[Should we guarantee what type it's returned as?]*
+The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the object.  *\[Should we guarantee what type it's returned as?]*
 
 The specification will also define a *specific* random-number generator for this purpose.  *\[Which one?]*  This ensures two things:
 
@@ -52,4 +53,3 @@ The downside of this is that you have manually pass the random value back to the
 
 It also requires either that the produced value is *suitable* as a seed, which isn't always the case (for many algos, seeds can have 64+ bits), or requires `Math.random()`, when invoked with a seed, to produce a `{val, nextSeed}` pair, instead of just producing the value directly like normal.
 
-I suspect it's rare to need a single seeded random value; most use-cases for this want a sequence of several values. As such, it's worthwhile to make that use-case easier, and JS's iterator protocol conveniently wraps all the state-management up for you and hides it.
