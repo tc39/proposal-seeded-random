@@ -40,6 +40,45 @@ Serializing/Restoring/Cloning a PRNG
 
 The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the PRNG object.  *\[Should we guarantee what type it's returned as?]*
 
+"Child" PRNGs
+-------------
+
+There are reasonable use-cases for generating *multiple, distinct* PRNGs on a page;
+for example, a game might want to use one for terrain generation, one for cloud generation, one for AI, etc.
+Using a single PRNG source can be hacked into doing this
+(for example, by saying that the first of every three values is for terrain, the second is for clouds, etc),
+but that's hacky and wasteful.
+
+One *could* manually generate several sub-PRNGs by using a master PRNG to generate several random values,
+and seeding each with the result,
+like:
+
+```js
+const MAX_SEED = ????;
+const parent = Math.seededPRNG({seed:0});
+const child = Math.seededPRNG({seed: parent.next().value * MAX_SEED});
+```
+
+But this limits the entropy of the seeds to the numerical precision of the JS number type.
+
+To avoid all of this and provide a robust way to generate sub-PRNGs,
+the PRNG object must have a `.randomSeed()` method.
+It's identical to `.random()`,
+but rather than producing a JS number that is uniform over the range [0,1),
+it produces a pseudo-random BigInt *\[or TypedArray?]* that is uniform over the range of valid seeds.
+It then advances the PRNG's internal state,
+same as `.random()`.
+
+You can then produce sub-PRNGs like:
+
+```js
+const parent = Math.seededPRNG({seed:0});
+const child1 = Math.seededPRNG({seed:parent.randomSeed()});
+const child2 = Math.seededPRNG({seed:parent.randomSeed()});
+// child1.random() != child2.random() !!!
+```
+
+
 Algorithm Choice
 ----------------
 
