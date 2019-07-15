@@ -8,7 +8,7 @@
 
 JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "automatically seeded" - each invocation produces a fresh unpredictable random number, not reproducible across runs or realms.  However, there are several use-cases that want a reproducible set of random values, and so want to be able to seed the random generator themselves.
 
-1. New APIs like the CSS Custom Paint, which can't store state but can be invoked arbitrarily often, want to be able to produce the same set of pseudo-random numbers each time they're invoked. 
+1. New APIs like the CSS Custom Paint, which can't store state but can be invoked arbitrarily often, want to be able to produce the same set of pseudo-random numbers each time they're invoked.
 
     Demo: <https://lab.iamvdo.me/houdini/rough-boxes/> (currently needs Chrome with the Experimental Web Platform Features flag).  This demo uses Math.random() to unpredictably shift the "rough borders", but the Houdini Custom Paint API re-invokes the callback any time the element needs to be "repainted" - whenever it changes size, or is off-screen for a bit, or just generally whenever (UAs are given substantial leeway in this regard). There's no way for the callback to store state for itself (by design), so it can't just pre-generate a list of random numbers and re-use them; instead, it currently just produces a totally fresh set of borders. (You can see this in effect if you zoom the page in or out, as each change repaints the element and re-invokes the callback.)
 
@@ -21,9 +21,9 @@ Currently, the only way to achieve these goals is to implement your own PRNG by 
 `Math.seededPRNG({seed})`
 -------------------------
 
-I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS integer or BigInt. *\[And/or a TypedArray?]*  
+I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS integer or BigInt. *\[And/or a TypedArray?]*
 
-`seededPRNG()` is a generator function, and the iterator it returns will yield an infinite sequence of random values seeded by the provided `seed`.  These values must approximate a uniform distribution over the range \[0,1], same as `Math.random()`.
+`seededPRNG()` is a generator function, and the iterator it returns will yield an infinite sequence of random values seeded by the provided `seed`.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
 
 That is, the usage will be something like:
 
