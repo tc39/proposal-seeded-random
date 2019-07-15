@@ -40,6 +40,14 @@ Serializing/Restoring/Cloning a PRNG
 
 The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the PRNG object.  *\[Should we guarantee what type it's returned as?]*
 
+You can then clone a PRNG like:
+
+```js
+const prng = Math.seededPRNG({seed:0});
+const clone = Math.seededPRNG({seed:prng.seed()});
+// prng.random() === clone.random()
+```
+
 "Child" PRNGs
 -------------
 
@@ -56,7 +64,7 @@ like:
 ```js
 const MAX_SEED = ????;
 const parent = Math.seededPRNG({seed:0});
-const child = Math.seededPRNG({seed: parent.next().value * MAX_SEED});
+const child = Math.seededPRNG({seed: parent.random() * MAX_SEED});
 ```
 
 But this limits the entropy of the seeds to the numerical precision of the JS number type.
@@ -75,7 +83,7 @@ You can then produce sub-PRNGs like:
 const parent = Math.seededPRNG({seed:0});
 const child1 = Math.seededPRNG({seed:parent.randomSeed()});
 const child2 = Math.seededPRNG({seed:parent.randomSeed()});
-// child1.random() != child2.random() !!!
+// child1.random() != child2.random()
 ```
 
 
