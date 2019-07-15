@@ -23,14 +23,14 @@ Currently, the only way to achieve these goals is to implement your own PRNG by 
 
 I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt. *\[And/or a TypedArray?]*
 
-`seededPRNG()` returns a function object which, on each invocation, will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
+`seededPRNG()` returns a PRNG object, which has a `.random()` member function.  On each invocation, it will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
 
 That is, the usage will be something like:
 
 ```
 const prng = Math.seededPRNG({seed:0});
 for(let i = 0; i < limit; i++) {
-  const r = prng();
+  const r = prng.random();
   // do something with each value
 }
 ```
