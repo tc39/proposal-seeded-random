@@ -35,7 +35,13 @@ for(let i = 0; i < limit; i++) {
 }
 ```
 
-The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the object.  *\[Should we guarantee what type it's returned as?]*
+Serializing/Restoring/Cloning a PRNG
+------------------------------------
+
+The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the PRNG object.  *\[Should we guarantee what type it's returned as?]*
+
+Algorithm Choice
+----------------
 
 The specification will also define a *specific* random-number generator for this purpose.  *\[Which one?]*  This ensures two things:
 
