@@ -23,9 +23,14 @@ Creating a PRNG: the `Math.seededPRNG({seed})` function
 
 I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt. *\[And/or a TypedArray?]*
 
-`seededPRNG()` returns a PRNG object, which has a `.random()` member function.  On each invocation, it will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
+It returns a PRNG object, the usage of which is described below.
 
-That is, the usage will be something like:
+Getting a Random Number: the `.random()` method
+-----------------------------------------------
+
+To obtain a random number from a PRNG object, the object has a `.random()` method. On each invocation, it will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
+
+Using the prng object is thus basically identical to using `Math.random()`:
 
 ```
 const prng = Math.seededPRNG({seed:0});
