@@ -18,8 +18,8 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
-`Math.seededPRNG({seed})`
--------------------------
+Creating a PRNG: the `Math.seededPRNG({seed})` function
+------------------------------------------
 
 I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt. *\[And/or a TypedArray?]*
 
@@ -35,21 +35,21 @@ for(let i = 0; i < limit; i++) {
 }
 ```
 
-Serializing/Restoring/Cloning a PRNG
-------------------------------------
+Serializing/Restoring/Cloning a PRNG: the `.seed` getter
+--------------------------------------------------------
 
-The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed()` method on the PRNG object.  *\[Should we guarantee what type it's returned as?]*
+The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object.  *\[Should we guarantee what type it's returned as?]*
 
 You can then clone a PRNG like:
 
 ```js
 const prng = Math.seededPRNG({seed:0});
-const clone = Math.seededPRNG({seed:prng.seed()});
+const clone = Math.seededPRNG({seed:prng.seed});
 // prng.random() === clone.random()
 ```
 
-"Child" PRNGs
--------------
+Making "Child" PRNGs: the `.randomSeed()` method
+------------------------------------------------
 
 There are reasonable use-cases for generating *multiple, distinct* PRNGs on a page;
 for example, a game might want to use one for terrain generation, one for cloud generation, one for AI, etc.
