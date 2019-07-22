@@ -49,9 +49,14 @@ You can then clone a PRNG like:
 
 ```js
 const prng = Math.seededPRNG({seed:0});
+for(let i = 0; i < 10; i++) prng.random(); // advance the state a bit
 const clone = Math.seededPRNG({seed:prng.seed});
 // prng.random() === clone.random()
 ```
+
+Since the seed is publicly accessible, it can be stored in a file/etc for later revival.
+For example, a game can store the current state of the seed in a save file,
+ensuring that upon loading it will generate the same sequence of random numbers as before.
 
 Making "Child" PRNGs: the `.randomSeed()` method
 ------------------------------------------------
