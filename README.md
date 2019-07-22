@@ -54,9 +54,20 @@ const clone = Math.seededPRNG({seed:prng.seed});
 // prng.random() === clone.random()
 ```
 
+Or, due to how option-bag arguments work,
+you can just pass the "parent" prng directly as the argument:
+
+```js
+const prng = Math.seededPRNG({seed:0});
+const clone = Math.seededPRNG(prng);
+// prng.random() === clone.random()
+```
+
 Since the seed is publicly accessible, it can be stored in a file/etc for later revival.
 For example, a game can store the current state of the seed in a save file,
 ensuring that upon loading it will generate the same sequence of random numbers as before.
+
+(There is no `.seed` setter.)
 
 Making "Child" PRNGs: the `.randomSeed()` method
 ------------------------------------------------
