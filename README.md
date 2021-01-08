@@ -21,7 +21,7 @@ Currently, the only way to achieve these goals is to implement your own PRNG by 
 Creating a PRNG: the `Math.seededPRNG({seed})` function
 ------------------------------------------
 
-I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt. *\[And/or a TypedArray?]*
+I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt.
 
 It returns a PRNG object, the usage of which is described below.
 
@@ -43,7 +43,7 @@ for(let i = 0; i < limit; i++) {
 Serializing/Restoring/Cloning a PRNG: the `.seed` getter
 --------------------------------------------------------
 
-The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object.  *\[Should we guarantee what type it's returned as?]*
+The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object. It will always return a BigInt.
 
 You can then clone a PRNG like:
 
@@ -93,8 +93,8 @@ But this limits the entropy of the seeds to the numerical precision of the JS nu
 To avoid all of this and provide a robust way to generate sub-PRNGs,
 the PRNG object must have a `.randomSeed()` method.
 It's identical to `.random()`,
-but rather than producing a JS number that is uniform over the range [0,1),
-it produces a pseudo-random BigInt *\[or TypedArray?]* that is uniform over the range of valid seeds.
+but rather than producing a JS number that is uniform over the range \[0,1),
+it produces a pseudo-random BigInt  that is uniform over the range of valid seeds.
 It then advances the PRNG's internal state,
 same as `.random()`.
 
