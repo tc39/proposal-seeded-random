@@ -118,8 +118,10 @@ The specification will also define a *specific* random-number generator for this
 
 The algorithm used is not, in this proposal, intended to be configurable.
 
-Issue: Why not a `Math.random()` argument?
-------------------------------------------
+FAQ
+----
+
+### Why not a `Math.random()` argument? ###
 
 Another possible approach is to add an options object to `Math.random()`, and define a `seed` key that can be provided.  When you do so, it uses that seed to generate the value, rather than its internal seed value.  This approach should be familiar from C/Java/etc.
 
@@ -127,3 +129,10 @@ The downside of this is that you have manually pass the random value back to the
 
 It also requires either that the produced value is *suitable* as a seed, which isn't always the case (for many algos, seeds can have 64+ bits), or requires `Math.random()`, when invoked with a seed, to produce a `{val, nextSeed}` pair, instead of just producing the value directly like normal.
 
+### We should add `randInt()`/etc as well ###
+
+This proposal is focused specifically on making a seeded PRNG, and intentionally matches the signature/behavior of the current unseeded `Math.random()`. I don't intend to explore additional random methods here, as they should exist in both seeded and unseeded forms.
+
+Instead, <https://github.com/tc39-transfer/proposal-random-functions> is a separate proposal for adding more random functions to the existing unseeded functionality. The intention is that the `PRNG` object from this proposal will grow all the same methods, so if we added `Math.randomInt()`, we'd also get `PRNG.randomInt()`, etc.
+
+Whichever proposal advances first will just concern itself with itself, and whichever advances second will carry the burden of defining that overlap. (That is, if this proposal goes first, then `proposal-random-functions` will define that all its methods also exist on `PRNG`; if it goes first, then this proposal will define that all the new random functions also exist as `PRNG` methods.)
