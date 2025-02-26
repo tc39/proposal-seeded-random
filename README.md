@@ -18,32 +18,37 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
-Creating a PRNG: the `Math.seededPRNG({seed})` function
+Creating a PRNG: the `Math.seededPRNG(seed)` function
 ------------------------------------------
 
-I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`.
+I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single `seed` argument.
 
 `seed` can be a `UInt8Array` (exact definition dependent on the algorithm we decide on)
 or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
 
 It returns a PRNG object, the usage of which is described below.
 
+> [!NOTE]
+> `Math.seededPRNG()` is a slightly annoying name to type.
+> Maybe just `Math.seeded()` or `Math.prng()`?
+
+
 Getting a Random Number: the `.random()` method
 -----------------------------------------------
 
-To obtain a random number from a PRNG object, the object has a `.random()` method. On each invocation, it will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range \[0,1), same as `Math.random()`.
+To obtain a random number from a PRNG object, the object has a `.random()` method. On each invocation, it will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range `[0,1)`, same as `Math.random()`.
 
 Using the prng object is thus basically identical to using `Math.random()`:
 
-```
-const prng = Math.seededPRNG({seed:0});
+```js
+const prng = Math.seededPRNG(0);
 for(let i = 0; i < limit; i++) {
   const r = prng.random();
   // do something with each value
 }
 ```
 
-Serializing/Restoring/Cloning a PRNG: the `.seed` getter
+Serializing/Restoring/Cloning a PRNG: the `.seed` property
 --------------------------------------------------------
 
 The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object. It will always return a `UInt8Array`.
@@ -51,18 +56,9 @@ The current state of the algorithm, suitable for feeding as the `seed` of anothe
 You can then clone a PRNG like:
 
 ```js
-const prng = Math.seededPRNG({seed:0});
+const prng = Math.seededPRNG(0);
 for(let i = 0; i < 10; i++) prng.random(); // advance the state a bit
-const clone = Math.seededPRNG({seed:prng.seed});
-// prng.random() === clone.random()
-```
-
-Or, due to how option-bag arguments work,
-you can just pass the "parent" prng directly as the argument:
-
-```js
-const prng = Math.seededPRNG({seed:0});
-const clone = Math.seededPRNG(prng);
+const clone = Math.seededPRNG(prng.seed);
 // prng.random() === clone.random()
 ```
 
@@ -70,7 +66,8 @@ Since the seed is publicly accessible, it can be stored in a file/etc for later 
 For example, a game can store the current state of the seed in a save file,
 ensuring that upon loading it will generate the same sequence of random numbers as before.
 
-(There is no `.seed` setter.)
+On setting, `.seed` verifies that it's being set to a `UInt8Array` or `Number`,
+and interprets it the same way as the constructor.
 
 Making "Child" PRNGs: the `.randomSeed()` method
 ------------------------------------------------
@@ -86,17 +83,18 @@ and seeding each with the result,
 like:
 
 ```js
-const MAX_SEED = ????;
-const parent = Math.seededPRNG({seed:0});
-const child = Math.seededPRNG({seed: parent.random() * MAX_SEED});
+const parent = Math.seededPRNG(0);
+const child1 = Math.seededPRNG(parent.random());
+const child2 = Math.seededPRNG(parent.random());
 ```
 
-But this limits the entropy of the seeds to the numerical precision of the JS number type.
+But this limits the entropy of the seeds to the numerical precision of the JS number type
+(or requires you to carefully manage the entropy of a `UInt8Array`).
 
 To avoid all of this and provide a robust way to generate sub-PRNGs,
 the PRNG object must have a `.randomSeed()` method.
 It's identical to `.random()`,
-but rather than producing a JS number that is uniform over the range \[0,1),
+but rather than producing a JS number that is uniform over the range `[0,1)`,
 it produces a pseudo-random `UInt8Array` that is uniform over the range of valid seeds.
 It then advances the PRNG's internal state,
 same as `.random()`.
@@ -104,17 +102,22 @@ same as `.random()`.
 You can then produce sub-PRNGs like:
 
 ```js
-const parent = Math.seededPRNG({seed:0});
-const child1 = Math.seededPRNG({seed:parent.randomSeed()});
-const child2 = Math.seededPRNG({seed:parent.randomSeed()});
+const parent = Math.seededPRNG(0);
+const child1 = Math.seededPRNG(parent.randomSeed());
+const child2 = Math.seededPRNG(parent.randomSeed());
 // child1.random() != child2.random()
 ```
+
+> [!NOTE]
+> Instead of explicitly generating a seed,
+> should we instead just have `parent.seededPRNG()`
+> which directly returns a child prng?
 
 
 Algorithm Choice
 ----------------
 
-The specification will also define a *specific* random-number generator for this purpose.  *\[Which one?]*  This ensures two things:
+The specification will also define a *specific* random-number generator for this purpose.  *(Which one?)*  This ensures two things:
 
 1. The range of possible seeds is knowable and stable, so if you're generating a random seed you can take full advantage of the possible entropy.
 2. The numbers produced are identical across (a) user agents, and (b) versions of the same user agent.  This is important for, say, using a seeded sequence to simulate a trial, and getting the same results across different computers.
