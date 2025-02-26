@@ -21,7 +21,10 @@ Currently, the only way to achieve these goals is to implement your own PRNG by 
 Creating a PRNG: the `Math.seededPRNG({seed})` function
 ------------------------------------------
 
-I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`, whose value must be either a JS Number or BigInt.
+I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single options-bag argument, with a required property `seed`.
+
+`seed` can be a `UInt8Array` (exact definition dependent on the algorithm we decide on)
+or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
 
 It returns a PRNG object, the usage of which is described below.
 
@@ -43,7 +46,7 @@ for(let i = 0; i < limit; i++) {
 Serializing/Restoring/Cloning a PRNG: the `.seed` getter
 --------------------------------------------------------
 
-The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object. It will always return a BigInt.
+The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object. It will always return a `UInt8Array`.
 
 You can then clone a PRNG like:
 
@@ -94,7 +97,7 @@ To avoid all of this and provide a robust way to generate sub-PRNGs,
 the PRNG object must have a `.randomSeed()` method.
 It's identical to `.random()`,
 but rather than producing a JS number that is uniform over the range \[0,1),
-it produces a pseudo-random BigInt  that is uniform over the range of valid seeds.
+it produces a pseudo-random `UInt8Array` that is uniform over the range of valid seeds.
 It then advances the PRNG's internal state,
 same as `.random()`.
 
