@@ -42,7 +42,15 @@ It returns a PRNG object, the usage of which is described below.
 Getting a Random Number: the `.random()` method
 -----------------------------------------------
 
-To obtain a random number from a PRNG object, the object has a `.random()` method. On each invocation, it will output an appropriate pseudo-random number based on its seed, and then update its seed for the next invocation.  These values must approximate a uniform distribution over the range `[0,1)`, same as `Math.random()`.
+To obtain a random number from a PRNG object, the object has a `.random()` method. On each invocation, it will output an appropriate pseudo-random number in the range `[0,1)` based on its state, and then update its state for the next invocation.
+
+To generate this value:
+
+1. Obtain 64 random bits from the PRNG.
+2. Shift right by 11, obtaining a 53-bit integer.
+3. Convert this integer to an equivalent float64.
+4. Multiply this float64 by `1/(2**53)`.
+5. Return the result.
 
 Using the prng object is thus basically identical to using `Math.random()`:
 
@@ -53,6 +61,10 @@ for(let i = 0; i < limit; i++) {
   // do something with each value
 }
 ```
+
+> [!NOTE]
+> This specific generation algo is used by Rust and numpy.
+> See <https://github.com/rust-random/rand/blob/7aa25d577e2df84a5156f824077bb7f6bdf28d97/src/distributions/float.rs#L111-L117>
 
 Serializing/Restoring/Cloning a PRNG: the `.state()` and `setState()` methods
 -----------------------------------------------------------
