@@ -2,29 +2,58 @@
 <pre id=log></pre>
 <script>
 function log(message) {document.querySelector("#log").textContent += message + "\n";};
-function* enumerate(iter, start=0) {let i = start;for(const el of iter) {yield [i, el];i++;}};
 
-Math.seededRandoms = function*(seed) {
- // Really dumb LCG, using the glibc constants
- if(!Number.isFinite(seed)) throw Error("Math.seededRandoms() takes a numeric seed.");
- const a = 1103515245;
- const c = 12345;
- const mod = Math.pow(2, 31) - 1;
- seed = (+seed) % mod;
- while(true) {
-  seed = (seed * a + c) % mod;
-  yield (seed & 0x3fffffff)/0x3fffffff;
- }
-};
+Math.seededPRNG = class seededPRNG {
+  #state;
 
+  constructor(init) {
+    this.#state = this.constructor.#stateFromInit(init);
+  }
+
+  static #stateFromInit(init) {
+    if(Number.isFinite(init)) {
+      return Math.floor(init);
+    }
+    if((init instanceof Uint8Array || init instanceof Int8Array || init instanceof Uint8ClampedArray) && init.byteLength == 1) {
+      console.log(init)
+      return init[0];
+    }
+    console.log(init)
+    throw new DOMException("Not a valid prng init value");
+  }
+
+  state() {
+    return this.#state;
+  }
+
+  setState(init) {
+    this.#state = this.constructor.stateFromInit(init);
+  }
+
+  random() {
+    // Really dumb LCG, using the glibc constants
+    const a = 1103515245;
+    const c = 12345;
+    const mod = Math.pow(2, 31) - 1;
+    let seed = (this.#state) % mod;
+    seed = (seed * a + c) % mod;
+    this.#state = seed;
+    return (seed & 0x3fffffff)/0x3fffffff;
+  }
+
+  randomSeed() {
+    return Math.floor(this.random() * 2**32);
+  }
+}
 
 var counts = [0,0,0,0,0,0,0,0,0,0];
 var limit = 1e5;
-for(const [i,r] of enumerate(Math.seededRandoms(0))) {
-  counts[Math.floor(r*10)]++;
-  if(i >= limit) break;
+var prng = new Math.seededPRNG(new Uint8Array([1]));
+for(var i = 0; i < limit; i++) {
+  counts[Math.floor(prng.random()*10)]++;
 }
-for(const [i,c] of enumerate(counts)) {
- log(`${i}: ${(c/limit*100).toFixed(1)}%`);
+for(let i = 0; i < counts.length; i++) {
+  c = counts[i];
+  log(`${i}: ${String(c).padStart(5)} ${(c/limit*100).toFixed(1).padStart(5)}%`);
 }
 </script>
