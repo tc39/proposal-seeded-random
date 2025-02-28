@@ -18,13 +18,19 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
-Creating a PRNG: the `Math.seededPRNG(seed)` function
+Creating a PRNG: the `Math.seededPRNG(seed|state)` function
 ------------------------------------------
 
 I propose to add a new method to the `Math` object, provisionally named `seededPRNG()`. It takes a single `seed` argument.
 
 `seed` can be a `UInt8Array` (exact definition dependent on the algorithm we decide on)
 or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
+If the `UInt8Array` is the correct size for a seed value,
+it's used as such;
+if it's the correct size for a state value,
+it's used as such;
+otherwise,
+the constructor throws.
 
 It returns a PRNG object, the usage of which is described below.
 
@@ -48,26 +54,28 @@ for(let i = 0; i < limit; i++) {
 }
 ```
 
-Serializing/Restoring/Cloning a PRNG: the `.seed` property
---------------------------------------------------------
+Serializing/Restoring/Cloning a PRNG: the `.state()` and `setState()` methods
+-----------------------------------------------------------
 
-The current state of the algorithm, suitable for feeding as the `seed` of another invocation of `seededPRNG()` that will produce identical numbers from that point forward, is accessible via a `.seed` getter method on the PRNG object. It will always return a `UInt8Array`.
+The `.state()` method return a fresh `UInt8Array` containing the PRNG's current state.
+(Note: the state is different and larger than a seed.)
+
+The `.setState()` method takes a `UInt8Array` containing a PRNG state,
+verifies that it's a valid state for the PRNG
+(correct size, and any other constraints)
+and replaces its own state with that data.
 
 You can then clone a PRNG like:
 
 ```js
 const prng = Math.seededPRNG(0);
 for(let i = 0; i < 10; i++) prng.random(); // advance the state a bit
-const clone = Math.seededPRNG(prng.seed);
+const clone = Math.seededPRNG(prng.state());
 // prng.random() === clone.random()
 ```
 
-Since the seed is publicly accessible, it can be stored in a file/etc for later revival.
-For example, a game can store the current state of the seed in a save file,
+For example, a game can store the current state of the prng in a save file,
 ensuring that upon loading it will generate the same sequence of random numbers as before.
-
-On setting, `.seed` verifies that it's being set to a `UInt8Array` or `Number`,
-and interprets it the same way as the constructor.
 
 Making "Child" PRNGs: the `.randomSeed()` method
 ------------------------------------------------
