@@ -142,12 +142,17 @@ const child2 = new Math.seededPRNG(parent.randomSeed());
 Algorithm Choice
 ----------------
 
-The specification will also define a *specific* random-number generator for this purpose.  *(Which one?)*  This ensures two things:
+This proposal defines a *specific* prng algorithm for this purpose,
+unlike the unspecified prng used by `Math.random()`.
+This ensures two things:
 
 1. The range of possible seeds is knowable and stable, so if you're generating a random seed you can take full advantage of the possible entropy.
 2. The numbers produced are identical across (a) user agents, and (b) versions of the same user agent.  This is important for, say, using a seeded sequence to simulate a trial, and getting the same results across different computers.
 
-The algorithm used is not, in this proposal, intended to be configurable.
+The current proposed algorithm is ChaCha12,
+which is the default algorithm used in Rust's `rand` crate.
+(See <https://github.com/rust-random/rand/issues/932> for discussion on this.)
+See #19 for discussion on alternatives.
 
 FAQ
 ----
