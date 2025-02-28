@@ -63,7 +63,9 @@ The `.state()` method return a fresh `UInt8Array` containing the PRNG's current 
 The `.setState()` method takes a `UInt8Array` containing a PRNG state,
 verifies that it's a valid state for the PRNG
 (correct size, and any other constraints)
-and replaces its own state with that data.
+and replaces its own state with that data
+(copying from the argument,
+not using the object directly).
 
 You can then clone a PRNG like:
 
@@ -120,6 +122,9 @@ const child2 = new Math.seededPRNG(parent.randomSeed());
 > Instead of explicitly generating a seed,
 > should we instead just have `parent.seededPRNG()`
 > which directly returns a child prng?
+>
+> Or just allow the constructor to take a `PRNG` object,
+> which implicitly pulls a value off of it to generate a seed/state from?
 
 
 Algorithm Choice
