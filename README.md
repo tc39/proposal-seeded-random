@@ -23,9 +23,9 @@ Creating a PRNG: the `Math.SeededPRNG(seed|state)` constructor
 
 I propose to add a new constructor method to the `Math` object, provisionally named `SeededPRNG()`. It takes a single `seed` argument.
 
-`seed` can be a `UInt8Array` (exact definition dependent on the algorithm we decide on)
+`seed` can be a `Uint8Array` (exact definition dependent on the algorithm we decide on)
 or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
-If the `UInt8Array` is the correct size for a seed value,
+If the `Uint8Array` is the correct size for a seed value,
 it's used as such;
 if it's the correct size for a state value,
 it's used as such;
@@ -70,10 +70,10 @@ for(let i = 0; i < limit; i++) {
 Serializing/Restoring/Cloning a PRNG: the `.state()` and `setState()` methods
 -----------------------------------------------------------
 
-The `.state()` method return a fresh `UInt8Array` containing the PRNG's current state.
+The `.state()` method return a fresh `Uint8Array` containing the PRNG's current state.
 (Note: the state is different and larger than a seed.)
 
-The `.setState()` method takes a `UInt8Array` containing a PRNG state,
+The `.setState()` method takes a `Uint8Array` containing a PRNG state,
 verifies that it's a valid state for the PRNG
 (correct size, and any other constraints)
 and replaces its own state with that data
@@ -112,13 +112,13 @@ const child2 = new Math.SeededPRNG(parent.random());
 ```
 
 But this limits the entropy of the seeds to the numerical precision of the JS number type
-(or requires you to carefully manage the entropy of a `UInt8Array`).
+(or requires you to carefully manage the entropy of a `Uint8Array`).
 
 To avoid all of this and provide a robust way to generate sub-PRNGs,
 the PRNG object must have a `.randomSeed()` method.
 It's identical to `.random()`,
 but rather than producing a JS number that is uniform over the range `[0,1)`,
-it produces a pseudo-random `UInt8Array` that is uniform over the range of valid seeds.
+it produces a pseudo-random `Uint8Array` that is uniform over the range of valid seeds.
 It then advances the PRNG's internal state,
 same as `.random()`.
 
