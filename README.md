@@ -149,12 +149,12 @@ class SeededPRNG {
   }
 
   random() {
-    let [val, this.#state] = randomVal(this.#state);
+    let [val, this.#state] = randomVal(this.#state); // Number in [0,1)
     return val;
   }
 
   randomSeed() {
-    let [seed, this.#state] = randomSeed(this.#state);
+    let [seed, this.#state] = randomSeed(this.#state); // Uint8Array that's a valid seed.
     return seed;
   }
 
