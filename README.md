@@ -18,10 +18,10 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
-Creating a PRNG: the `Math.SeededPRNG(seed|state)` constructor
+Creating a PRNG: the `new SeededPRNG(seed|state)` constructor
 --------------------------------------------------------------
 
-I propose to add a new constructor method to the `Math` object, provisionally named `SeededPRNG()`. It takes a single `seed` argument.
+I propose to add a new built-in class, provisionally named `SeededPRNG()`. Its constructor takes a single `seed` argument.
 
 `seed` can be a `Uint8Array` (exact definition dependent on the algorithm we decide on)
 or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
@@ -33,12 +33,6 @@ otherwise,
 the constructor throws.
 
 It returns a `SeededPRNG` object, the usage of which is described below.
-
-> [!NOTE]
-> `Math.SeededPRNG()` is a slightly annoying name to type.
-> Maybe just `Math.Seeded()` or `Math.prng()`?
-> See #31.
-
 
 Getting a Random Number: the `.random()` method
 -----------------------------------------------
@@ -56,7 +50,7 @@ To generate this value:
 Using the prng object is thus basically identical to using `Math.random()`:
 
 ```js
-const prng = new Math.SeededPRNG(0);
+const prng = new SeededPRNG(0);
 for(let i = 0; i < limit; i++) {
   const r = prng.random();
   // do something with each value
@@ -67,7 +61,7 @@ for(let i = 0; i < limit; i++) {
 > This specific generation algo is used by Rust and numpy.
 > See <https://github.com/rust-random/rand/blob/7aa25d577e2df84a5156f824077bb7f6bdf28d97/src/distributions/float.rs#L111-L117>
 
-Serializing/Restoring/Cloning a PRNG: the `.state()` and `setState()` methods
+Serializing/Restoring/Cloning a PRNG: the `.state()` and `.setState()` methods
 -----------------------------------------------------------
 
 The `.state()` method return a fresh `Uint8Array` containing the PRNG's current state.
@@ -83,9 +77,9 @@ not using the object directly).
 You can then clone a PRNG like:
 
 ```js
-const prng = new Math.SeededPRNG(0);
+const prng = new SeededPRNG(0);
 for(let i = 0; i < 10; i++) prng.random(); // advance the state a bit
-const clone = new Math.SeededPRNG(prng.state());
+const clone = new SeededPRNG(prng.state());
 // prng.random() === clone.random()
 ```
 
@@ -106,9 +100,9 @@ and seeding each with the result,
 like:
 
 ```js
-const parent = new Math.SeededPRNG(0);
-const child1 = new Math.SeededPRNG(parent.random());
-const child2 = new Math.SeededPRNG(parent.random());
+const parent = new SeededPRNG(0);
+const child1 = new SeededPRNG(parent.random());
+const child2 = new SeededPRNG(parent.random());
 ```
 
 But this limits the entropy of the seeds to the numerical precision of the JS number type
@@ -125,9 +119,9 @@ same as `.random()`.
 You can then produce sub-PRNGs like:
 
 ```js
-const parent = new Math.SeededPRNG(0);
-const child1 = new Math.SeededPRNG(parent.randomSeed());
-const child2 = new Math.SeededPRNG(parent.randomSeed());
+const parent = new SeededPRNG(0);
+const child1 = new SeededPRNG(parent.randomSeed());
+const child2 = new SeededPRNG(parent.randomSeed());
 // child1.random() != child2.random()
 ```
 
