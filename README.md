@@ -34,6 +34,14 @@ the constructor throws.
 
 It returns a `SeededPRNG` object, the usage of which is described below.
 
+> [!NOTE]
+> [Issue 33](https://github.com/tc39/proposal-seeded-random/issues/33) - Any other preferences for the name? `SeededRandom()`, perhaps? Multiple +1s for the current name.
+
+
+> [!NOTE]
+> [Issue 26](https://github.com/tc39/proposal-seeded-random/issues/26) - Should we allow other buffer/view types with a stable byte ordering (not dependent on system endianness)? Or all buffer/view types, matching general DOM practices? This API would be forming precedent across ES.
+
+
 Getting a Random Number: the `.random()` method
 -----------------------------------------------
 
