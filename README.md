@@ -134,6 +134,42 @@ const child2 = new SeededPRNG(parent.randomSeed());
 > which implicitly pulls a value off of it to generate a seed/state from?
 
 
+API Summary
+-----------
+
+```js
+class SeededPRNG {
+  #state;
+
+  constructor(val) {
+    if(looksLikeAState(val)) this.#state = copy(val);
+    else if(looksLikeASeed(val)) this.#state = stateFromSeed(val);
+    else if(isNumber(val)) this.#state = stateFromNumber(val);
+    else throw TypeError("SeededPRNG(v) argument must be a seed, a state, or a Number.");
+  }
+
+  random() {
+    let [val, this.#state] = randomVal(this.#state);
+    return val;
+  }
+
+  randomSeed() {
+    let [seed, this.#state] = randomSeed(this.#state);
+    return seed;
+  }
+
+  state() {
+    return copy(this.#state);
+  }
+
+  setState(state) {
+    if(looksLikeAState(state)) this.#state = copy(val);
+    else throw TypeError("SeededPRNG.setState(v) argument must be a valid state.")
+  }
+}
+```
+
+
 Algorithm Choice
 ----------------
 
