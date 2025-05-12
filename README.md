@@ -18,12 +18,12 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
-Creating a PRNG: the `new SeededPRNG(seed|state)` constructor
+Creating a PRNG: the `new SeededPRNG(Uint8Array|Number)` constructor
 --------------------------------------------------------------
 
-I propose to add a new built-in class, provisionally named `SeededPRNG()`. Its constructor takes a single `seed` argument.
+I propose to add a new built-in class, provisionally named `SeededPRNG()`. Its constructor takes a single `init` argument.
 
-`seed` can be a `Uint8Array` (exact definition dependent on the algorithm we decide on)
+`init` can be a `Uint8Array` (exact definition dependent on the algorithm we decide on)
 or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
 If the `Uint8Array` is the correct size for a seed value,
 it's used as such;
@@ -149,11 +149,11 @@ API Summary
 class SeededPRNG {
   #state;
 
-  constructor(val) {
-    if(looksLikeAState(val)) this.#state = copy(val);
-    else if(looksLikeASeed(val)) this.#state = stateFromSeed(val);
-    else if(isNumber(val)) this.#state = stateFromNumber(val);
-    else throw TypeError("SeededPRNG(v) argument must be a seed, a state, or a Number.");
+  constructor(init) {
+    if(looksLikeAState(init)) this.#state = copy(init);
+    else if(looksLikeASeed(init)) this.#state = stateFromSeed(init);
+    else if(isNumber(init)) this.#state = stateFromNumber(init);
+    else throw TypeError("SeededPRNG(init) argument must be a seed, a state, or a Number.");
   }
 
   random() {
