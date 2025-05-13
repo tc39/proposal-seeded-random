@@ -1,0 +1,195 @@
+<pre class=metadata>
+title: Seeded Random
+status: proposal
+stage: 1
+location: https://github.com/tc39/proposal-seeded-random/
+copyright: false
+contributors: Tab Atkins-Bittner
+</pre>
+
+<emu-intro id=introduction>
+  <h1>Introduction</h1>
+  <p>This is the preliminary formal specification for a proposed `SeededPRNG` class
+  in JavaScript. It modifies the original <a
+  href=https://tc39.github.io/ecma262/>ECMAScript specification</a> with
+  several new or revised clauses. See <a
+  href=https://github.com/tc39/proposal-seeded-random/blob/main/README.md>the proposal's
+  explainer</a> for the proposal's background, motivation, and usage examples.</p>
+</emu-intro>
+
+<emu-clause id="sec-seededprng-objects">
+  <h1>SeededPRNG Object</h1>
+  <p>A <dfn>Seeded PRNG</dfn> is an object representing a Pseudo-Random Number Generator;
+    it holds a complex internal binary "state",
+    and uses that to generate pseudo-random numbers on command.
+    Two SeededPRNGs with the same "state" will generate the same sequence of numbers,
+    allowing for reproducible "randomness".</p>
+
+  <p>Seeded PRNGs defined by this specification generate random numbers using the ChaCha 12 algorithm.</p>
+
+  <emu-clause id="sec-seededprng-constructor">
+    <h1>The SeededPRNG Constructor</h1>
+    <p>The SeededPRNG constructor:</p>
+    <ul>
+      <li>is <dfn>%SeededPRNG%</dfn>.</li>
+      <li>is the initial value of the *"SeededPRNG"* property of the global object.</li>
+      <li>creates and initializes a new Seeded PRNG when called as a constructor.</li>
+      <li>is not intended to be called as a function and will throw an exception when called in that manner.</li>
+    </ul>
+
+
+    <emu-clause id="sec-seededprng-constructor-init">
+      <h1>SeededPRNG ( _init_ )</h1>
+      <p>This function performs the following steps when called.</p>
+      <emu-alg>
+        1. If NewTarget is undefined, throw a TypeError exception.
+        1. Let _result_ be ?OrdinaryCreateFromConstructor(NewTarget, "%SeededPRNG.prototype%", « [[PRNGState]]»).
+        1. If _init_ is a Uint8Array:
+          1. If _init_ has length 112, set _result_.[[PRNGState]] to SeededPRNGStateFromState(_init_).
+          1. Otherwise, if _init_ has length 32, set _result_.[[PRNGState]] to SeededPRNGStateFromSeed(_init_).
+          1. Otherwise, throw a TypeError.
+        1. Otherwise, if _init_ is a Number, set _result_.[[PRNGState]] to SeededPRNGStateFromNumber(_init_).
+        1. Otherwise, throw a TypeError.
+        1. Return _result_.
+      </emu-alg>
+
+      <emu-note type="editor">
+        // Seed is 32 bytes
+        // State is 64 (state) + 32 (seed) + 16 (counter) = 112 bytes
+        // Number, I guess, spams its float64 representation four times into a seed.
+      </emu-note>
+
+      <emu-note>
+        <p>SeededPRNG objects can be initialized in three ways:</p>
+
+        <ol>
+          <li>Directly from a state value, which is 112 bytes long
+            (represented by a Uint8Array).
+            All possible states are valid, 
+            although naively constructing one manually 
+            is unlikely to give the proper pseudo-random behavior.
+          <li>From a seed value, which is 32 bytes long
+            (represented by a Uint8Array).
+            All possible seeds are valid and reasonable to use.
+          <li>For convenience, directly from a Number.
+            This just initializes a seed directly from the Number's binary representation;
+            a Number is represented as a 64-bit (8 byte) float,
+            so four copies of its bit pattern can fill out a seed.
+        </ol>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng-state-from-state" type="abstract operation">
+      <h1>SeededPRNGStateFromState(_state_)</h1>
+
+      <emu-alg>
+        1. Return a copy of _state_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng-state-from-seed" type="abstract operation">
+      <h1>SeededPRNGStateFromSeed(_seed_)</h1>
+
+      <emu-alg>
+        1. Create a _state_ from _seed_, however ChaCha specifies that works.
+        2. Return _state_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng-state-from-number" type="abstract operation">
+      <h1>SeededPRNGStateFromNumber(_number_)</h1>
+
+      <emu-alg>
+        1. Let _seed_ be a 32-byte array.
+        2. Fill _seed_ with four contiguous copies of _number_'s binary representation.
+        3. Return SeededPRNGStateFromSeed(_seed_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-seededprng-constructor">
+      <h1>Properties of the SeededPRNG Constructor</h1>
+      <p>The SeededPRNG constructor:</p>
+      <ul>
+        <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+      </ul>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-the-seededprng-prototype-object">
+    <h1>Properties of the SeededPRNG Prototype Object</h1>
+    <p>The <dfn>SeededPRNG prototype object</dfn>:</p>
+    <ul>
+      <li>is <dfn>%SeededPRNG.prototype%</dfn>.</li>
+      <li>is an ordinary object.</li>
+      <li>is not a SeededPRNG object; it does not have a [[PRNGState]] internal slot.</li>
+      <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+    </ul>
+    <p>Unless explicitly stated otherwise, the methods of the SeededPRNG prototype object defined below are not generic and the *this* value passed to them must be a SeededPRNG value.</p>
+
+    <emu-clause id="sec-seededprng.prototype.constructor">
+      <h1>SeededPRNG.prototype.constructor</h1>
+      <p>The initial value of `SeededPRNG.prototype.constructor` is %SeededPRNG%.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng.prototype.random">
+      <h1>SeededPRNG.prototype.random ()</h1>
+      <p>...</p>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. Let « _nextState_, _bits64_ » be GetPRNGValue( this.[[PRNGState]] ).
+        1. Set this.[[PRNGState]] to _nextState_.
+        1. Set _int53_ to the result of right-shifting _bits64_ by 11, then interpreting the result as a binary integer.
+        1. Let _divisor_ be the mathematical value 1/(2<sup>53</sup>).
+        1. Let _randVal_ be the product of _int53_ and _divisor_.
+        1. Return 𝔽( _randVal_ ).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-getprngvalue" type="abstract operation">
+      <h1>GetPRNGValue( _state_ )</h1>
+      <p>The GetPRNGValue() abstract operation takes a SeededPRNG [[PRNGState]] value,
+      and returns a pair of values,
+      consisting of the *next* [[PRNGState]] value,
+      and a pseudo-random 64-bit value.</p>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. Whatever ChaCha 12 does.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng.prototype.randomSeed">
+      <h1>SeededPRNG.prototype.randomSeed ()</h1>
+      <p>...</p>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _seed_ be a Uint8Array with length 16.
+        1. Let _nextState_ be this.[[PRNGState]].
+        1. For the integers 0-3 inclusive _i_:
+          1. Let « _nextState_, _bits64_ » be GetPRNGValue( _nextState_ ).
+          1. Write _bits64_ into _seed_, starting with the byte 8 * _i_.
+        1. Set this.[[PRNGState]] to _nextState_.
+        1. Return _seed_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng.prototype.state">
+      <h1>SeededPRNG.prototype.state ()</h1>
+      <p>...</p>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. Return a copy of this.[[PRNGState]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-seededprng.prototype.setState">
+      <h1>SeededPRNG.prototype.setState ( _bytes_ )</h1>
+      <p>...</p>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. If _bytes_ is a Uint8Array of length 112,
+          set this.[[PRNGState]] to SeededPRNGStateFromState( _bytes_ ).
+        2. Otherwise, throw a TypeError.
+        3. Return *undefined*.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+</emu-clause>
