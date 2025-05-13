@@ -20,8 +20,26 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
-Creating a PRNG: the `new SeededPRNG(Uint8Array|Number)` constructor
---------------------------------------------------------------
+Expected Usage
+--------------
+
+A `SeededPRNG` object, once constructed, has a `.random()` method. This works identically to `Math.random()`, so literally any existing usage of `Math.random()` can be replaced by initializing a `SeededPRNG` and then calling `prng.random()` instead.
+
+It could even be installed onto the global object, like:
+
+```js
+let globalPRNG = new SeededPRNG(0);
+Math.random = globalPRNG.random.bind(globalPRNG);
+
+// now `Math.random()` produces the same sequence of values on every page load.
+```
+
+Security libraries that currently "poison" `Math.random()` to avoid its possible use as a communications channel could also do the above, to allow it to still operate roughly as intended but without the communications possibility.
+
+API
+------
+
+### Creating a PRNG: the `new SeededPRNG(Uint8Array|Number)` constructor ###
 
 I propose to add a new built-in class, provisionally named `SeededPRNG()`. Its constructor takes a single `init` argument.
 
@@ -44,8 +62,7 @@ It returns a `SeededPRNG` object, the usage of which is described below.
 > [Issue 26](https://github.com/tc39/proposal-seeded-random/issues/26) - Should we allow other buffer/view types with a stable byte ordering (not dependent on system endianness)? Or all buffer/view types, matching general DOM practices? This API would be forming precedent across ES.
 
 
-Getting a Random Number: the `.random()` method
------------------------------------------------
+### Getting a Random Number: the `.random()` method ###
 
 To obtain a random number from a PRNG object, the object has a `.random()` method. On each invocation, it will output an appropriate pseudo-random number in the range `[0,1)` based on its state, and then update its state for the next invocation.
 
@@ -71,8 +88,7 @@ for(let i = 0; i < limit; i++) {
 > This specific generation algo is used by Rust and numpy.
 > See <https://github.com/rust-random/rand/blob/7aa25d577e2df84a5156f824077bb7f6bdf28d97/src/distributions/float.rs#L111-L117>
 
-Serializing/Restoring/Cloning a PRNG: the `.state()` and `.setState()` methods
------------------------------------------------------------
+### Serializing/Restoring/Cloning a PRNG: the `.state()` and `.setState()` methods ###
 
 The `.state()` method return a fresh `Uint8Array` containing the PRNG's current state.
 (Note: the state is different and larger than a seed.)
@@ -96,8 +112,7 @@ const clone = new SeededPRNG(prng.state());
 For example, a game can store the current state of the prng in a save file,
 ensuring that upon loading it will generate the same sequence of random numbers as before.
 
-Making "Child" PRNGs: the `.randomSeed()` method
-------------------------------------------------
+### Making "Child" PRNGs: the `.randomSeed()` method ###
 
 There are reasonable use-cases for generating *multiple, distinct* PRNGs on a page;
 for example, a game might want to use one for terrain generation, one for cloud generation, one for AI, etc.
@@ -119,7 +134,7 @@ But this limits the entropy of the seeds to the numerical precision of the JS nu
 (or requires you to carefully manage the entropy of a `Uint8Array`).
 
 To avoid all of this and provide a robust way to generate sub-PRNGs,
-the PRNG object must have a `.randomSeed()` method.
+`SeededPRNG` has a `.randomSeed()` method.
 It's identical to `.random()`,
 but rather than producing a JS number that is uniform over the range `[0,1)`,
 it produces a pseudo-random `Uint8Array` that is uniform over the range of valid seeds.
@@ -135,17 +150,8 @@ const child2 = new SeededPRNG(parent.randomSeed());
 // child1.random() != child2.random()
 ```
 
-> [!NOTE]
-> Instead of explicitly generating a seed,
-> should we instead just have `parent.SeededPRNG()`
-> which directly returns a child prng?
->
-> Or just allow the constructor to take a `SeededPRNG` object,
-> which implicitly pulls a value off of it to generate a seed/state from?
 
-
-API Summary
------------
+### API Summary ###
 
 ```js
 class SeededPRNG {
