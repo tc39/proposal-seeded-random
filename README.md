@@ -4,6 +4,8 @@
 
 **Champion: Tab Atkins-Bittner**
 
+**Spec Draft: <https://tc39.github.io/proposal-seeded-random/>**
+
 ------
 
 JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "automatically seeded" - each invocation produces a fresh unpredictable random number, not reproducible across runs or realms.  However, there are several use-cases that want a reproducible set of random values, and so want to be able to seed the random generator themselves.
