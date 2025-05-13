@@ -21,7 +21,8 @@ contributors: Tab Atkins-Bittner
   <h1>SeededPRNG Object</h1>
   <p>A <dfn>Seeded PRNG</dfn> is an object representing a Pseudo-Random Number Generator;
     it holds a complex internal binary "state",
-    and uses that to generate pseudo-random numbers on command.
+    and uses that to generate pseudo-random numbers on command,
+    mutating its state as it does so.
     Two SeededPRNGs with the same "state" will generate the same sequence of numbers,
     allowing for reproducible "randomness".</p>
 
@@ -47,16 +48,16 @@ contributors: Tab Atkins-Bittner
         1. If _init_ is a Uint8Array:
           1. If _init_ has length 112, set _result_.[[PRNGState]] to SeededPRNGStateFromState(_init_).
           1. Otherwise, if _init_ has length 32, set _result_.[[PRNGState]] to SeededPRNGStateFromSeed(_init_).
-          1. Otherwise, throw a TypeError.
+          1. Otherwise, ~throw~ a *TypeError*.
         1. Otherwise, if _init_ is a Number, set _result_.[[PRNGState]] to SeededPRNGStateFromNumber(_init_).
-        1. Otherwise, throw a TypeError.
+        1. Otherwise, ~throw~ a *TypeError*.
         1. Return _result_.
       </emu-alg>
 
       <emu-note type="editor">
-        // Seed is 32 bytes
-        // State is 64 (state) + 32 (seed) + 16 (counter) = 112 bytes
-        // Number, I guess, spams its float64 representation four times into a seed.
+        // Seed is 32 bytes<br>
+        // State is 64 (state) + 32 (seed) + 16 (counter) = 112 bytes<br>
+        // Number spams its float64 representation four times into a seed.
       </emu-note>
 
       <emu-note>
@@ -112,6 +113,7 @@ contributors: Tab Atkins-Bittner
       <ul>
         <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
       </ul>
+    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-properties-of-the-seededprng-prototype-object">
@@ -132,7 +134,7 @@ contributors: Tab Atkins-Bittner
 
     <emu-clause id="sec-seededprng.prototype.random">
       <h1>SeededPRNG.prototype.random ()</h1>
-      <p>...</p>
+      <p>The `random()` method returns a pseudo-random value between 0 and 1 (including 0 but excluding 1), similar to `Math.random()`.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
         1. Let « _nextState_, _bits64_ » be GetPRNGValue( this.[[PRNGState]] ).
@@ -158,7 +160,7 @@ contributors: Tab Atkins-Bittner
 
     <emu-clause id="sec-seededprng.prototype.randomSeed">
       <h1>SeededPRNG.prototype.randomSeed ()</h1>
-      <p>...</p>
+      <p>The `randomSeed()` method returns a random seed value, suitable for initializing another `SeededPRNG` object with. This method's return values cover the full possible range of 2<sup>128</sup> seeds, unlike something like `new SeededPRNG(prng.random())`, which only produces 2<sup>53</sup> possible seeds.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
         1. Let _seed_ be a Uint8Array with length 16.
@@ -173,7 +175,7 @@ contributors: Tab Atkins-Bittner
 
     <emu-clause id="sec-seededprng.prototype.state">
       <h1>SeededPRNG.prototype.state ()</h1>
-      <p>...</p>
+      <p>The `state()` method returns the internal state of the `SeededPRNG` object, suitable for initializing another `SeededPRNG` which will then produce an identical sequence of pseudo-random values.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
         1. Return a copy of this.[[PRNGState]].
@@ -182,13 +184,13 @@ contributors: Tab Atkins-Bittner
 
     <emu-clause id="sec-seededprng.prototype.setState">
       <h1>SeededPRNG.prototype.setState ( _bytes_ )</h1>
-      <p>...</p>
+      <p>The `setState()` method overwrites the internal state of the `SeededPRNG` object with a new state.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
         1. If _bytes_ is a Uint8Array of length 112,
           set this.[[PRNGState]] to SeededPRNGStateFromState( _bytes_ ).
         2. Otherwise, throw a TypeError.
-        3. Return *undefined*.
+        3. Return *this*.
       </emu-alg>
     </emu-clause>
   </emu-clause>
