@@ -61,6 +61,16 @@ It returns a `SeededPRNG` object, the usage of which is described below.
 > [!NOTE]
 > [Issue 26](https://github.com/tc39/proposal-seeded-random/issues/26) - Should we allow other buffer/view types with a stable byte ordering (not dependent on system endianness)? Or all buffer/view types, matching general DOM practices? This API would be forming precedent across ES.
 
+> [!NOTE]
+> [Issue 35](https://github.com/tc39/proposal-seeded-random/issues/35) - To discourage bad usage while still allowing simple test usage, we'll restrict the Number argument to being an integer in the [0, 255] range (one byte, in other words). That gives a good-enough space to play with for testing purposes, while implicitly suggesting that this construction method isn't intended for security (since there are only 256 possible random sequences that can be generated from it). It also prevents `new SeededPRNG(Math.random())` from working, which has bad statistical properties and insufficient entropy, so people will use `SeededPRNG.fromRandomSeed()` instead.
+
+
+### Creating a Random PRNG: the `SeededPRNG.fromRandomSeed()` static method ###
+
+Sometimes you don't need a *specific* seeded PRNG instance, you just want the ability to pause/resume/transfer/reproduce the PRNG you're using. Getting a randomly-seeded PRNG to start with is perfectly fine.
+
+`SeededPRNG.fromRandomSeed()` generates a 32-byte random seed from the browser-internal entropy source, and returns a fresh `SeededPRNG` initialized from that.
+
 
 ### Getting a Random Number: the `.random()` method ###
 
@@ -162,6 +172,11 @@ class SeededPRNG {
     else if(looksLikeASeed(init)) this.#state = stateFromSeed(init);
     else if(isNumber(init)) this.#state = stateFromNumber(init);
     else throw TypeError("SeededPRNG(init) argument must be a seed, a state, or a Number.");
+  }
+
+  static fromRandomSeed() {
+    const browserPrng = TheInternalBrowserPRNG;
+    return new SeededPRNG(browserPrng.randomSeed());
   }
 
   random() {
