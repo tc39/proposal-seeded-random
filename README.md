@@ -18,7 +18,7 @@ JS's PRNG methods (`Math.random()`, `crypto.getRandomValues()`, etc) are all "au
 
 3. Games that use randomness and want to avoid "save-scumming", where players save and repeatedly reload the game until an event comes out the way they want.
 
-Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGS like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
+Currently, the only way to achieve these goals is to implement your own PRNG by hand in JS. Simple PRNGs like an LCG aren't hard to code, but they don't produce good pseudo-random numbers; better PRNGs are harder to implement correctly. It would be much better to provide the ability to manually seed a generator and get a predictable sequence out.  While we're here, we can lean on JS features to provide a better usability than typical random libs provide for this use-case.
 
 Expected Usage
 --------------
@@ -67,8 +67,8 @@ Random.Seeded = class Random.Seeded {
   }
 
   setState(state: Uint8Array): undefined {
-    if(looksLikeAState(state)) this.#state = copy(val);
-    else throw TypeError("Random.Seeded.setState(v) argument must be a valid state.")
+    if(looksLikeAState(state)) this.#state = copy(state);
+    else throw TypeError("Random.Seeded.setState(state) argument must be a valid state.")
   }
 }
 
@@ -82,7 +82,7 @@ Random.seed = function(): Uint8Array {
 
 ### The `Random` Namespace Object ###
 
-In conjuction with the [More Random Methods proposal](https://github.com/tc39/proposal-random-functions),
+In conjunction with the [More Random Methods proposal](https://github.com/tc39/proposal-random-functions),
 this proposal adds a new `Random` namespace object,
 used to hold the various new randomness-related operations.
 
@@ -185,7 +185,7 @@ To generate this value:
 
 ### Serializing/Restoring/Cloning a PRNG: the `.getState()` and `.setState()` methods ###
 
-The `.getState()` method return a fresh `Uint8Array` containing the PRNG's current state.
+The `.getState()` method returns a fresh `Uint8Array` containing the PRNG's current state.
 (Note: the state is different and larger than a seed.)
 
 The `.setState()` method takes a `Uint8Array` containing a PRNG state,
@@ -216,7 +216,7 @@ as it would have if the player had continued playing.
 Algorithm Choice
 ----------------
 
-This proposal specifies that the CaCha12 algorithm is used as the PRNG algorithm.
+This proposal specifies that the ChaCha12 algorithm is used as the PRNG algorithm.
 This ensures two things:
 
 1. The range of possible seeds is knowable and stable, so if you're generating a random seed you can take full advantage of the possible entropy.
