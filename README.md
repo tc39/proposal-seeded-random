@@ -1,10 +1,10 @@
 # Seeded Pseudo-Random Numbers
 
-**Stage: 1**
+**Stage: 2**
 
 **Champion: Tab Atkins-Bittner**
 
-**Spec Draft: <https://tc39.github.io/proposal-seeded-random/>**
+**Spec Draft: <https://tc39.github.io/proposal-seeded-random/>** (out of date, README is current source of truth)
 
 ------
 
@@ -23,12 +23,12 @@ Currently, the only way to achieve these goals is to implement your own PRNG by 
 Expected Usage
 --------------
 
-A `SeededPRNG` object, once constructed, has a `.random()` method. This works identically to `Math.random()`, so literally any existing usage of `Math.random()` can be replaced by initializing a `SeededPRNG` and then calling `prng.random()` instead.
+A `Random.Seeded` object, once constructed, has a `.random()` method. This works identically to `Math.random()`, so literally any existing usage of `Math.random()` can be replaced by initializing a `Random.Seeded` and then calling `prng.random()` instead.
 
 It could even be installed onto the global object, like:
 
 ```js
-let globalPRNG = new SeededPRNG(0);
+let globalPRNG = new Random.Seeded(0);
 Math.random = globalPRNG.random.bind(globalPRNG);
 
 // now `Math.random()` produces the same sequence of values on every page load.
@@ -39,37 +39,95 @@ Security libraries that currently "poison" `Math.random()` to avoid its possible
 API
 ------
 
-### Creating a PRNG: the `new SeededPRNG(Uint8Array|Number)` constructor ###
+Here's a quick summary of the API proposal:
 
-I propose to add a new built-in class, provisionally named `SeededPRNG()`. Its constructor takes a single `init` argument.
+```js
+Random.Seeded = class Random.Seeded {
+  #state: Uint8Array;
 
-`init` can be a `Uint8Array` (exact definition dependent on the algorithm we decide on)
-or a JS Number (which we interpret into a seed in some well-defined way; this is just for convenience in simple cases).
-If the `Uint8Array` is the correct size for a seed value,
-it's used as such;
-if it's the correct size for a state value,
-it's used as such;
-otherwise,
-the constructor throws.
+  constructor(init: Uint8Array | Number) {
+    if(looksLikeAState(init)) this.#state = copy(init);
+    else if(looksLikeASeed(init)) this.#state = stateFromSeed(init);
+    else if(isNumber(init)) this.#state = stateFromNumber(init);
+    else throw TypeError("Random.Seeded(init) argument must be a seed, a state, or a Number.");
+  }
 
-It returns a `SeededPRNG` object, the usage of which is described below.
+  random(): Number {
+    let [val, this.#state] = randomVal(this.#state); // Number in [0,1)
+    return val;
+  }
 
-> [!NOTE]
-> [Issue 33](https://github.com/tc39/proposal-seeded-random/issues/33) - Any other preferences for the name? `SeededRandom()`, perhaps? Multiple +1s for the current name.
+  seed(): Uint8Array {
+    let [seed, this.#state] = randomSeed(this.#state); // Uint8Array that's a valid seed.
+    return seed;
+  }
 
+  getState(): Uint8Array {
+    return copy(this.#state);
+  }
+
+  setState(state: Uint8Array): undefined {
+    if(looksLikeAState(state)) this.#state = copy(val);
+    else throw TypeError("Random.Seeded.setState(v) argument must be a valid state.")
+  }
+}
+
+Random.random = function(): Number {
+  return TheInternalBrowserPRNG.random();
+}
+Random.seed = function(): Uint8Array {
+  return TheInternalBrowserPRNG.seed();
+}
+```
+
+### The `Random` Namespace Object ###
+
+In conjuction with the [More Random Methods proposal](https://github.com/tc39/proposal-random-functions),
+this proposal adds a new `Random` namespace object,
+used to hold the various new randomness-related operations.
+
+The `Random` namespace object, in addition to holding the `Random.Seeded` class (described below),
+holds methods matching that of the `Random.Seeded` class,
+which simply call the matching method on a *user-agent internal* `SeededPRNG` instance.
+This internal instance is initialized from a random seed by the user agent.
+
+
+#### The `Random.random()` and `Random.seed()` functions ####
+
+This proposal defines two methods on the `Random` namespace object,
+`.random()` and `.seed()`,
+matching the two methods of the same names defined by `Random.Seeded`.
+"More Random Methods" will define more.
+
+Each simply returns the result of calling `.random()` or `.seed()`
+on the UA-internal `Random.Seeded` object.
+
+`Random.seed()` is intended to be used to initialize a `Random.Seeded` to an unpredictable starting value,
+like `new Random.Seeded(Random.seed())`.
+
+
+
+### Creating a PRNG: the `new Random.Seeded(Uint8Array|Number)` constructor ###
+
+This proposal adds a new class, `Random.Seeded`, which lives on the `Random` namespace object as `Random.Seeded`.
+
+The constructor takes a single `init` argument, which is either a Uint8Array or a Number.
+
+If `init` is a `Uint8Array`, its length must either be 112 bytes 
+(indicating that it's initializing from a state value)
+or 32 bytes
+(indicating that it's initializing from a seed value).
+If `init` is a `Number`, it must be an integer between 0 and 255 (inclusive);
+this is merely a shorthand for setting a seed that contains all 0 bytes except for the final byte,
+which is the passed Number value.
+
+It returns a `Random.Seeded` object, the usage of which is described below.
 
 > [!NOTE]
 > [Issue 26](https://github.com/tc39/proposal-seeded-random/issues/26) - Should we allow other buffer/view types with a stable byte ordering (not dependent on system endianness)? Or all buffer/view types, matching general DOM practices? This API would be forming precedent across ES.
 
 > [!NOTE]
-> [Issue 35](https://github.com/tc39/proposal-seeded-random/issues/35) - To discourage bad usage while still allowing simple test usage, we'll restrict the Number argument to being an integer in the [0, 255] range (one byte, in other words). That gives a good-enough space to play with for testing purposes, while implicitly suggesting that this construction method isn't intended for security (since there are only 256 possible random sequences that can be generated from it). It also prevents `new SeededPRNG(Math.random())` from working, which has bad statistical properties and insufficient entropy, so people will use `SeededPRNG.fromRandomSeed()` instead.
-
-
-### Creating a Random PRNG: the `SeededPRNG.fromRandomSeed()` static method ###
-
-Sometimes you don't need a *specific* seeded PRNG instance, you just want the ability to pause/resume/transfer/reproduce the PRNG you're using. Getting a randomly-seeded PRNG to start with is perfectly fine.
-
-`SeededPRNG.fromRandomSeed()` generates a 32-byte random seed from the browser-internal entropy source, and returns a fresh `SeededPRNG` initialized from that.
+> [Issue 35](https://github.com/tc39/proposal-seeded-random/issues/35) - To discourage bad usage while still allowing simple test usage, we'll restrict the Number argument to being an integer in the [0, 255] range (one byte, in other words). That gives a good-enough space to play with for testing purposes, while implicitly suggesting that this construction method isn't intended for security (since there are only 256 possible random sequences that can be generated from it). It also prevents `new Random.Seeded(Math.random())` from working, which has bad statistical properties and insufficient entropy, so people will use `Random.Seeded.fromRandomSeed()` instead.
 
 
 ### Getting a Random Number: the `.random()` method ###
@@ -87,7 +145,7 @@ To generate this value:
 Using the prng object is thus basically identical to using `Math.random()`:
 
 ```js
-const prng = new SeededPRNG(0);
+const prng = new Random.Seeded(0);
 for(let i = 0; i < limit; i++) {
   const r = prng.random();
   // do something with each value
@@ -98,9 +156,36 @@ for(let i = 0; i < limit; i++) {
 > This specific generation algo is used by Rust and numpy.
 > See <https://github.com/rust-random/rand/blob/7aa25d577e2df84a5156f824077bb7f6bdf28d97/src/distributions/float.rs#L111-L117>
 
-### Serializing/Restoring/Cloning a PRNG: the `.state()` and `.setState()` methods ###
+### Getting a Random Seed: the `.seed()` method ###
 
-The `.state()` method return a fresh `Uint8Array` containing the PRNG's current state.
+There are reasonable use-cases for generating *multiple, distinct* PRNGs on a page;
+for example, a game might want to use one for terrain generation, one for cloud generation, one for AI, etc.
+Using a single `Random.Seeded` object can be hacked into doing this
+(for example, by saying that the first of every three values is for terrain, the second is for clouds, etc),
+but that's hacky and wasteful.
+
+Instead, you can initialize multiple `Random.Seeded` object with random seeds from an *existing* `Random.Seeded` object,
+like so:
+
+```js
+const parent = new Random.Seeded(0);
+const child1 = new Random.Seeded(parent.seed());
+const child2 = new Random.Seeded(parent.seed());
+// child1.random() != child2.random()
+```
+
+This ensures that your "child" PRNGs will always produce the same sequence of values
+if you start from the same "parent" PRNG,
+while leveraging the full possible seed entropy.
+
+To generate this value:
+
+1. Obtain 256 random bits from the PRNG.
+2. Return a (length 32) Uint8Array containing those bits.
+
+### Serializing/Restoring/Cloning a PRNG: the `.getState()` and `.setState()` methods ###
+
+The `.getState()` method return a fresh `Uint8Array` containing the PRNG's current state.
 (Note: the state is different and larger than a seed.)
 
 The `.setState()` method takes a `Uint8Array` containing a PRNG state,
@@ -113,108 +198,30 @@ not using the object directly).
 You can then clone a PRNG like:
 
 ```js
-const prng = new SeededPRNG(0);
+const prng = new Random.Seeded(0);
 for(let i = 0; i < 10; i++) prng.random(); // advance the state a bit
-const clone = new SeededPRNG(prng.state());
+const clone = new Random.Seeded(prng.getState());
 // prng.random() === clone.random()
 ```
 
 For example, a game can store the current state of the prng in a save file,
-ensuring that upon loading it will generate the same sequence of random numbers as before.
-
-### Making "Child" PRNGs: the `.randomSeed()` method ###
-
-There are reasonable use-cases for generating *multiple, distinct* PRNGs on a page;
-for example, a game might want to use one for terrain generation, one for cloud generation, one for AI, etc.
-Using a single PRNG source can be hacked into doing this
-(for example, by saying that the first of every three values is for terrain, the second is for clouds, etc),
-but that's hacky and wasteful.
-
-One *could* manually generate several sub-PRNGs by using a master PRNG to generate several random values,
-and seeding each with the result,
-like:
-
-```js
-const parent = new SeededPRNG(0);
-const child1 = new SeededPRNG(parent.random());
-const child2 = new SeededPRNG(parent.random());
-```
-
-But this limits the entropy of the seeds to the numerical precision of the JS number type
-(or requires you to carefully manage the entropy of a `Uint8Array`).
-
-To avoid all of this and provide a robust way to generate sub-PRNGs,
-`SeededPRNG` has a `.randomSeed()` method.
-It's identical to `.random()`,
-but rather than producing a JS number that is uniform over the range `[0,1)`,
-it produces a pseudo-random `Uint8Array` that is uniform over the range of valid seeds.
-It then advances the PRNG's internal state,
-same as `.random()`.
-
-You can then produce sub-PRNGs like:
-
-```js
-const parent = new SeededPRNG(0);
-const child1 = new SeededPRNG(parent.randomSeed());
-const child2 = new SeededPRNG(parent.randomSeed());
-// child1.random() != child2.random()
-```
+ensuring that upon loading it will generate the same sequence of random numbers
+as it would have if the player had continued playing.
 
 
-### API Summary ###
 
-```js
-class SeededPRNG {
-  #state;
 
-  constructor(init) {
-    if(looksLikeAState(init)) this.#state = copy(init);
-    else if(looksLikeASeed(init)) this.#state = stateFromSeed(init);
-    else if(isNumber(init)) this.#state = stateFromNumber(init);
-    else throw TypeError("SeededPRNG(init) argument must be a seed, a state, or a Number.");
-  }
-
-  static fromRandomSeed() {
-    const browserPrng = TheInternalBrowserPRNG;
-    return new SeededPRNG(browserPrng.randomSeed());
-  }
-
-  random() {
-    let [val, this.#state] = randomVal(this.#state); // Number in [0,1)
-    return val;
-  }
-
-  randomSeed() {
-    let [seed, this.#state] = randomSeed(this.#state); // Uint8Array that's a valid seed.
-    return seed;
-  }
-
-  state() {
-    return copy(this.#state);
-  }
-
-  setState(state) {
-    if(looksLikeAState(state)) this.#state = copy(val);
-    else throw TypeError("SeededPRNG.setState(v) argument must be a valid state.")
-  }
-}
-```
 
 
 Algorithm Choice
 ----------------
 
-This proposal defines a *specific* prng algorithm for this purpose,
-unlike the unspecified prng used by `Math.random()`.
+This proposal specifies that the CaCha12 algorithm is used as the PRNG algorithm.
 This ensures two things:
 
 1. The range of possible seeds is knowable and stable, so if you're generating a random seed you can take full advantage of the possible entropy.
 2. The numbers produced are identical across (a) user agents, and (b) versions of the same user agent.  This is important for, say, using a seeded sequence to simulate a trial, and getting the same results across different computers.
 
-The current proposed algorithm is ChaCha12,
-which is the default algorithm used in Rust's `rand` crate.
-(See <https://github.com/rust-random/rand/issues/932> for discussion on this.)
-See #19 for discussion on alternatives.
 
 FAQ
 ----
@@ -231,6 +238,6 @@ It also requires either that the produced value is *suitable* as a state, which 
 
 This proposal is focused specifically on making a seeded PRNG, and intentionally matches the signature/behavior of the current unseeded `Math.random()`. I don't intend to explore additional random methods here, as they should exist in both seeded and unseeded forms.
 
-Instead, <https://github.com/tc39-transfer/proposal-random-functions> is a separate proposal for adding more random functions to the existing unseeded functionality. The intention is that the `SeededPRNG` object from this proposal will grow all the same methods, so if we added `Math.randomInt()`, we'd also get `SeededPRNG.randomInt()`, etc.
+Instead, <https://github.com/tc39-transfer/proposal-random-functions> is a separate proposal for adding more random functions to the existing unseeded functionality. The intention is that the `Random.Seeded` object from this proposal will grow all the same methods, so if we added `Math.randomInt()`, we'd also get `Random.Seeded.randomInt()`, etc.
 
-Whichever proposal advances first will just concern itself with itself, and whichever advances second will carry the burden of defining that overlap. (That is, if this proposal goes first, then `proposal-random-functions` will define that all its methods also exist on `SeededPRNG`; if it goes first, then this proposal will define that all the new random functions also exist as `SeededPRNG` methods.)
+Whichever proposal advances first will just concern itself with itself, and whichever advances second will carry the burden of defining that overlap. (That is, if this proposal goes first, then `proposal-random-functions` will define that all its methods also exist on `Random.Seeded`; if it goes first, then this proposal will define that all the new random functions also exist as `Random.Seeded` methods.)
