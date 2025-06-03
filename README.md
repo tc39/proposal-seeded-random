@@ -42,7 +42,7 @@ API
 Here's a quick summary of the API proposal:
 
 ```js
-Random.Seeded = class Random.Seeded {
+Random.Seeded = class SeededRandom {
   #state: Uint8Array;
 
   constructor(init: Uint8Array | Number) {
