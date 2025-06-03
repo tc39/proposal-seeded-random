@@ -42,6 +42,15 @@ API
 Here's a quick summary of the API proposal:
 
 ```js
+const Random = { // new global namespace object
+  random(): Number {
+    return TheInternalBrowserPRNG.random();
+  },
+  seed(): Uint8Array {
+    return TheInternalBrowserPRNG.seed();
+  },
+};
+
 Random.Seeded = class SeededRandom {
   #state: Uint8Array;
 
@@ -103,13 +112,6 @@ Random.Seeded = class SeededRandom {
     this.#state = copy(state);
     return this;
   }
-}
-
-Random.random = function(): Number {
-  return TheInternalBrowserPRNG.random();
-}
-Random.seed = function(): Uint8Array {
-  return TheInternalBrowserPRNG.seed();
 }
 ```
 
