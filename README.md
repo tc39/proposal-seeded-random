@@ -28,7 +28,7 @@ A `Random.Seeded` object, once constructed, has a `.random()` method. This works
 It could even be installed onto the global object, like:
 
 ```js
-let globalPRNG = new Random.Seeded(0);
+let globalPRNG = Random.Seeded.fromFixed(0);
 Math.random = globalPRNG.random.bind(globalPRNG);
 
 // now `Math.random()` produces the same sequence of values on every page load.
