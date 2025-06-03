@@ -45,11 +45,42 @@ Here's a quick summary of the API proposal:
 Random.Seeded = class SeededRandom {
   #state: Uint8Array;
 
-  constructor(init: Uint8Array | Number) {
-    if(looksLikeAState(init)) this.#state = copy(init);
-    else if(looksLikeASeed(init)) this.#state = stateFromSeed(init);
-    else if(isNumber(init)) this.#state = stateFromNumber(init);
-    else throw TypeError("Random.Seeded(init) argument must be a seed, a state, or a Number.");
+  constructor(seed: Uint8Array) {
+    if(!seed instanceof Uint8Array) throw new TypeError();
+    if(seed.length > 32) throw new RangeError();
+    
+    // Prefix with 0 bytes if needed.
+    const paddedSeed = new Uint8Array(32);
+    paddedSeed.set(32 - seed.length, seed);
+
+    this.#state = stateFromSeed(paddedSeed);
+    return this;
+  }
+
+  static fromSeed(seed: Uint8Array): Random.Seeded {
+    if(!seed instanceof Uint8Array) throw new TypeError();
+    if(seed.length != 32) throw new RangeError();
+    const prng = InternalMakeFreshSeededRandom();
+    prng.setState(stateFromSeed(seed));
+    return prng;
+  }
+
+  static fromState(state: Uint8Array): Random.Seeded {
+    if(!state instanceof Uint8Array) throw new TypeError();
+    if(state.length != 112) throw new RangeError();
+    const prng = InternalMakeFreshSeededRandom();
+    prng.setState(state);
+    return prng;
+  }
+
+  static fromFixed(byte: Number): Random.Seeded {
+    if(typeof byte != "number") throw new TypeError();
+    if(!Number.isInteger(byte) || byte < 0 || byte > 255) throw new RangeError();
+    const prng = InternalMakeFreshSeededRandom();
+    const seed = new Uint8Array(32);
+    seed[31] = byte;
+    prng.setState(stateFromSeed(seed));
+    return prng;
   }
 
   random(): Number {
@@ -66,9 +97,11 @@ Random.Seeded = class SeededRandom {
     return copy(this.#state);
   }
 
-  setState(state: Uint8Array): undefined {
-    if(looksLikeAState(state)) this.#state = copy(state);
-    else throw TypeError("Random.Seeded.setState(state) argument must be a valid state.")
+  setState(state: Uint8Array): Seeded.Random {
+    if(!state instanceof Uint8Array) throw new TypeError();
+    if(state.length != 112) throw new RangeError();
+    this.#state = copy(state);
+    return this;
   }
 }
 
@@ -102,32 +135,36 @@ matching the two methods of the same names defined by `Random.Seeded`.
 Each simply returns the result of calling `.random()` or `.seed()`
 on the UA-internal `Random.Seeded` object.
 
+`Random.random()`, thus, is identical to `Math.random()`, except that it uses a higher-quality prng algorithm.
+
 `Random.seed()` is intended to be used to initialize a `Random.Seeded` to an unpredictable starting value,
 like `new Random.Seeded(Random.seed())`.
 
 
 
-### Creating a PRNG: the `new Random.Seeded(Uint8Array|Number)` constructor ###
+### Creating a PRNG: the `new Random.Seeded(Uint8Array)` constructor ###
 
 This proposal adds a new class, `Random.Seeded`, which lives on the `Random` namespace object as `Random.Seeded`.
 
-The constructor takes a single `init` argument, which is either a Uint8Array or a Number.
+The constructor takes a single `seed` argument, which is a Uint8Array of length 32 or less.
 
-If `init` is a `Uint8Array`, its length must either be 112 bytes 
-(indicating that it's initializing from a state value)
-or 32 bytes
-(indicating that it's initializing from a seed value).
-If `init` is a `Number`, it must be an integer between 0 and 255 (inclusive);
-this is merely a shorthand for setting a seed that contains all 0 bytes except for the final byte,
-which is the passed Number value.
+If `seed` is less than 32 bytes, it's prefixed with enough 0 bytes to make it 32 bytes long. If it's more than 32 bytes, a `RangeError` is thrown.
 
-It returns a `Random.Seeded` object, the usage of which is described below.
+`seed` is then used to create a state vector, and a fresh `Random.Seeded` object with that state vector is returned.
+
+> [!NOTE]
+> Note that `TypedArray` objects have a `.slice()`, same as `Array`, so if you want to seed a `Random.Seeded` from a value with an unpredictable byte size, you can use `new Random.Seeded(tarr.slice(-32))` (or `.slice(0, 32)`, etc, depending on how you want to slice too-large seeds). Too-small seeds will be automatically padded for you.
 
 > [!NOTE]
 > [Issue 26](https://github.com/tc39/proposal-seeded-random/issues/26) - Should we allow other buffer/view types with a stable byte ordering (not dependent on system endianness)? Or all buffer/view types, matching general DOM practices? This API would be forming precedent across ES.
 
-> [!NOTE]
-> [Issue 35](https://github.com/tc39/proposal-seeded-random/issues/35) - To discourage bad usage while still allowing simple test usage, we'll restrict the Number argument to being an integer in the [0, 255] range (one byte, in other words). That gives a good-enough space to play with for testing purposes, while implicitly suggesting that this construction method isn't intended for security (since there are only 256 possible random sequences that can be generated from it). It also prevents `new Random.Seeded(Math.random())` from working, which has bad statistical properties and insufficient entropy, so people will use `Random.Seeded.fromRandomSeed()` instead.
+### Factory Methods: `.fromSeed()`, `.fromState()`, `.fromFixed()` ###
+
+In addition to the constructor, three static factory methods exist on the `Random.Seeded` class.
+
+* `Random.Seeded.fromSeed(seed)` has the same behavior as the constructor, but requires a correct length (32 bytes) seed value. (Useful if you want to make sure your seed source doesn't accidentally regress and start passing too little entropy.)
+* `Random.Seeded.fromState(state)` takes a state vector (a `Uint8Array` of length 112) and returns a `Random.Seeded` initialized directly to that state. (This is more convenient/efficient than creating a `Seeded.Random` from a junk value and calling `.setState()` immediately.)
+* `Random.Seeded.fromFixed(num)` takes a Number byte (an integer 0-255), and treats this as the lowest byte of an otherwise-zero seed value. (In other words, equivalent to `new Random.Seeded(Uint8Array.of(num))`.)
 
 
 ### Getting a Random Number: the `.random()` method ###
@@ -168,7 +205,7 @@ Instead, you can initialize multiple `Random.Seeded` object with random seeds fr
 like so:
 
 ```js
-const parent = new Random.Seeded(0);
+const parent = Random.Seeded.fromFixed(0);
 const child1 = new Random.Seeded(parent.seed());
 const child2 = new Random.Seeded(parent.seed());
 // child1.random() != child2.random()
@@ -186,7 +223,7 @@ To generate this value:
 ### Serializing/Restoring/Cloning a PRNG: the `.getState()` and `.setState()` methods ###
 
 The `.getState()` method returns a fresh `Uint8Array` containing the PRNG's current state.
-(Note: the state is different and larger than a seed.)
+(Note: the state is different and larger than a seed; 112 bytes vs 32.)
 
 The `.setState()` method takes a `Uint8Array` containing a PRNG state,
 verifies that it's a valid state for the PRNG
@@ -198,9 +235,9 @@ not using the object directly).
 You can then clone a PRNG like:
 
 ```js
-const prng = new Random.Seeded(0);
+const prng = Random.Seeded.fromFixed(0);
 for(let i = 0; i < 10; i++) prng.random(); // advance the state a bit
-const clone = new Random.Seeded(prng.getState());
+const clone = Random.Seeded.fromState(prng.getState());
 // prng.random() === clone.random()
 ```
 
